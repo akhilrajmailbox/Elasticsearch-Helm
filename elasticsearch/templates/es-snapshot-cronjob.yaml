@@ -1,0 +1,48 @@
+{{ if .Values.EsSnapshotCronJob.enabled }}
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: {{ include "elasticsearch.fullname" . }}-es-cronsnap
+  labels:
+    IgnoreNagios: enable
+spec:
+  schedule: "0 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          volumes:
+            - name: {{ template "elasticsearch.fullname" . }}-es-cronsnap
+              configMap:
+                name: {{ template "elasticsearch.fullname" . }}-es-cronsnap
+                items:
+                  - key: snapshot.py
+                    path: snapshot.py
+          containers:
+          - name: cron-snapshots
+            imagePullPolicy: {{ .Values.EsSnapshotCronJob.image.pullPolicy }}
+            image: {{ .Values.EsSnapshotCronJob.image.repository }}:{{ .Values.EsSnapshotCronJob.image.tag }}
+            # args:
+            # - /bin/bash
+            # - -c
+            # - python3 snapshot.py
+            env:
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
+            envFrom:
+              - secretRef:
+                  name: {{ template "elasticsearch.fullname" . }}-es-cronsnap
+
+            volumeMounts:
+            - name: {{ template "elasticsearch.fullname" . }}-es-cronsnap
+              mountPath: "/opt/snapshot.py"
+              subPath: "snapshot.py"
+              readOnly: true
+          restartPolicy: OnFailure
+{{ end }}

@@ -1,0 +1,25 @@
+{{ if and (.Values.es.enabled) (not .Values.node.enabled) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "elasticsearch.fullname" . }}-es-data
+{{- if .Values.data.service.annotations }}
+  annotations:
+{{ toYaml .Values.data.service.annotations | indent 4 }}
+{{- end }}
+  labels:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: data
+spec:
+  ports:
+  - port: {{ .Values.data.service.port }}
+    name: transport
+    targetPort: 9300
+    protocol: {{ .Values.data.service.protocol }}
+  clusterIP: None
+  selector:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: data
+{{ end }}

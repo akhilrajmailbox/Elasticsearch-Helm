@@ -1,0 +1,25 @@
+{{ if .Values.apm.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "elasticsearch.fullname" . }}-apm
+{{- if .Values.apm.service.annotations }}
+  annotations:
+{{ toYaml .Values.apm.service.annotations | indent 4 }}
+{{- end }}
+  labels:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: apm
+spec:
+  type: {{ .Values.apm.service.type }}
+  selector:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: apm
+  ports:
+  - name: http
+    port: {{ .Values.apm.service.port }}
+    targetPort: 8200
+    protocol: {{ .Values.apm.service.protocol }}
+{{ end }}

@@ -1,0 +1,49 @@
+{{ if and (not .Values.es.enabled) (.Values.node.enabled) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "elasticsearch.fullname" . }}-discovery
+{{- if .Values.node.service.discovery.annotations }}
+  annotations:
+{{ toYaml .Values.node.service.discovery.annotations | indent 4 }}
+{{- end }}
+  labels:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: node
+spec:
+  selector:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: node
+  ports:
+  - name: transport
+    port: {{ .Values.node.service.discovery.port }}
+    targetPort: 9300
+    protocol: {{ .Values.node.service.discovery.protocol }}
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "elasticsearch.fullname" . }}-es-client
+{{- if .Values.node.service.client.annotations }}
+  annotations:
+{{ toYaml .Values.node.service.client.annotations | indent 4 }}
+{{- end }}
+  labels:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: node
+spec:
+  type: {{ .Values.node.service.client.type }}
+  selector:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: node
+  ports:
+  - name: http
+    port: {{ .Values.node.service.client.port }}
+    targetPort: 9200
+    protocol: {{ .Values.node.service.client.protocol }}
+{{ end }}

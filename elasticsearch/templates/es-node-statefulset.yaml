@@ -1,0 +1,155 @@
+{{ if and (not .Values.es.enabled) (.Values.node.enabled) }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ template "elasticsearch.fullname" . }}-node
+  labels:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: node
+spec:
+  serviceName: elasticsearch-node
+  replicas: {{ .Values.node.replicaCount }}
+  selector:
+    matchLabels:
+{{ include "labels.standard" . | indent 6 }}
+      component: elasticsearch
+      role: node
+  template:
+    metadata:
+      labels:
+{{ include "labels.standard" . | indent 8 }}
+        component: elasticsearch
+        role: node
+    spec:
+      {{- if .Values.node.priorityClassName }}
+      priorityClassName: "{{ .Values.node.priorityClassName }}"
+      {{- end }}
+      volumes:
+        - name: es-config
+          configMap:
+            name: {{ template "elasticsearch.fullname" . }}-es
+            items:
+              - key: elasticsearch.yml
+                path: elasticsearch.yml
+        {{- if and (.Values.EsSnapshot.enabled) (.Values.EsSnapshot.gcs.enabled) }}
+        - name: gcp-es-sa-token
+          secret:
+            secretName: gcp-es-sa-token
+            items:
+              - key: serviceaccount.json
+                path: serviceaccount.json
+        {{- end }}
+        {{- if not .Values.node.persistence.enabled }}
+        - emptyDir:
+          name: {{ template "elasticsearch.fullname" . }}-storage
+        {{- end }}
+      initContainers:
+      - name: init-sysctl
+        image: busybox:1.27.2
+        command:
+        - sysctl
+        - -w
+        - vm.max_map_count=262144
+        securityContext:
+          privileged: true
+      containers:
+      - name: es-node
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        {{ if or (.Values.EsSnapshot.enabled) (.Values.EsAuthAutoCreation.enabled ) }}
+        envFrom:
+        {{ end }}
+        {{ if .Values.EsSnapshot.enabled }}
+          - secretRef:
+              name: {{ include "elasticsearch.fullname" . }}-es-snapshot-secret
+        {{ end }}
+        {{ if .Values.EsAuthAutoCreation.enabled }}
+          - secretRef:
+              name: {{ include "elasticsearch.fullname" . }}-es-auth-secret
+        {{ end }}
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+
+        - name: CLUSTER_NAME
+          value: "{{ .Values.cluster_name }}"
+        - name: NUMBER_OF_MASTERS
+          value: "{{ .Values.node.number_of_master }}"
+        - name: DISCOVERY_SERVICE
+          value: "{{ template "elasticsearch.fullname" . }}-discovery"
+        - name: ES_JAVA_OPTS
+          value: "{{ .Values.node.java_opts }}"
+        - name: NODE_MASTER
+          value: "true"
+        - name: NODE_DATA
+          value: "true"
+        - name: NODE_INGEST
+          value: "true"
+        - name: HTTP_ENABLE
+          value: "true"
+        - name: NETWORK_HOST
+          value: _site_,_lo_
+        - name: PROCESSORS
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.cpu
+        ports:
+        - containerPort: 9300
+          name: transport
+        - containerPort: 9200
+          name: http
+        volumeMounts:
+        - name: {{ template "elasticsearch.fullname" . }}-storage
+          mountPath: /data
+        - name: es-config
+          mountPath: /elasticsearch/config/elasticsearch.yml
+          subPath: elasticsearch.yml
+          readOnly: true
+        {{- if and (.Values.EsSnapshot.enabled) (.Values.EsSnapshot.gcs.enabled) }}
+        - name: gcp-es-sa-token
+          mountPath: /opt/secrets/serviceaccount.json
+          subPath: serviceaccount.json
+          readOnly: true
+        {{- end }}
+        resources:
+{{ toYaml .Values.node.resources | indent 12 }}
+    {{- with .Values.node.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.node.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.node.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+
+  {{- if .Values.node.persistence.enabled }}
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ template "elasticsearch.fullname" . }}-storage
+    spec:
+      accessModes:
+        - {{ .Values.node.persistence.accessMode | quote }}
+    {{- if .Values.node.persistence.storageClass }}
+    {{- if (eq "-" .Values.node.persistence.storageClass) }}
+      storageClassName: ""
+    {{- else }}
+      storageClassName: "{{ .Values.node.persistence.storageClass }}"
+    {{- end }}
+    {{- end }}
+      resources:
+        requests:
+          storage: "{{ .Values.node.persistence.size }}"
+  {{- end }}
+{{ end }}

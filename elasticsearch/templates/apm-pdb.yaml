@@ -1,0 +1,24 @@
+{{ if .Values.apm.enabled }}
+{{ if .Values.apm.podDisruptionBudget.enabled }}
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "elasticsearch.fullname" . }}-apm-pdb
+  labels:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: apm
+spec:
+{{- if .Values.apm.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.apm.podDisruptionBudget.minAvailable }}
+{{- end }}
+{{- if .Values.apm.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.apm.podDisruptionBudget.maxUnavailable }}
+{{- end }}
+  selector:
+    matchLabels:
+{{ include "labels.standard" . | indent 6 }}
+      component: elasticsearch
+      role: apm
+{{ end }}
+{{ end }}

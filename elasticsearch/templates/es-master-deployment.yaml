@@ -1,0 +1,130 @@
+{{ if and (.Values.es.enabled) (not .Values.node.enabled) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "elasticsearch.fullname" . }}-master
+  labels:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: master
+spec:
+  replicas: {{ .Values.master.replicaCount }}
+  selector:
+    matchLabels:
+{{ include "labels.standard" . | indent 6 }}
+      component: elasticsearch
+      role: master
+  template:
+    metadata:
+      labels:
+{{ include "labels.standard" . | indent 8 }}
+        component: elasticsearch
+        role: master
+    spec:
+      {{- if .Values.master.priorityClassName }}
+      priorityClassName: "{{ .Values.master.priorityClassName }}"
+      {{- end }}
+      volumes:
+        - name: storage
+          emptyDir:
+            medium: ""
+        - name: es-config
+          configMap:
+            name: {{ template "elasticsearch.fullname" . }}-es
+            items:
+              - key: elasticsearch.yml
+                path: elasticsearch.yml
+        {{- if and (.Values.EsSnapshot.enabled) (.Values.EsSnapshot.gcs.enabled) }}
+        - name: gcp-es-sa-token
+          secret:
+            secretName: gcp-es-sa-token
+            items:
+              - key: serviceaccount.json
+                path: serviceaccount.json
+        {{- end }}
+      initContainers:
+      - name: init-sysctl
+        image: busybox:1.27.2
+        command:
+        - sysctl
+        - -w
+        - vm.max_map_count=262144
+        securityContext:
+          privileged: true
+      containers:
+      - name: master
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        {{ if or (.Values.EsSnapshot.enabled) (.Values.EsAuthAutoCreation.enabled ) }}
+        envFrom:
+        {{ end }}
+        {{ if .Values.EsSnapshot.enabled }}
+          - secretRef:
+              name: {{ include "elasticsearch.fullname" . }}-es-snapshot-secret
+        {{ end }}
+        {{ if .Values.EsAuthAutoCreation.enabled }}
+          - secretRef:
+              name: {{ include "elasticsearch.fullname" . }}-es-auth-secret
+        {{ end }}
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+
+        - name: CLUSTER_NAME
+          value: "{{ .Values.cluster_name }}"
+        - name: DISCOVERY_SERVICE
+          value: "{{ template "elasticsearch.fullname" . }}-discovery"
+        - name: NUMBER_OF_MASTERS
+          value: "{{ .Values.master.number_of_master }}"
+        - name: ES_JAVA_OPTS
+          value: "{{ .Values.master.java_opts }}"
+        - name: NODE_MASTER
+          value: "true"
+        - name: NODE_INGEST
+          value: "false"
+        - name: NODE_DATA
+          value: "false"
+        - name: HTTP_ENABLE
+          value: "false"
+        - name: PROCESSORS
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.cpu
+        ports:
+        - containerPort: 9300
+          name: transport
+        volumeMounts:
+        - name: storage
+          mountPath: /data
+        - name: es-config
+          mountPath: /elasticsearch/config/elasticsearch.yml
+          subPath: elasticsearch.yml
+          readOnly: true
+        {{- if and (.Values.EsSnapshot.enabled) (.Values.EsSnapshot.gcs.enabled) }}
+        - name: gcp-es-sa-token
+          mountPath: /opt/secrets/serviceaccount.json
+          subPath: serviceaccount.json
+          readOnly: true
+        {{- end }}
+        resources:
+{{ toYaml .Values.master.resources | indent 12 }}
+    {{- with .Values.master.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.master.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.master.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+{{ end }}

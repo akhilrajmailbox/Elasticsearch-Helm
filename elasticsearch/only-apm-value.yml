@@ -1,0 +1,58 @@
+############################################################################
+## APM Server Node
+es:
+  enabled: false
+node:
+  enabled: false
+kibana:
+  enabled: false
+EsSnapshotCronJob:
+  enabled: false
+
+apm:
+  enabled: true
+  esAdmin: "YOUR_ES_ADMIN"
+  esPassword: "YOUR_ES_PASS"
+  esUrl: "http://YOUR_ES_URL:9200"
+  apmToken: "YOUR_APM_TOKEN"
+  image:
+    repository: akhilrajmailbox/elasticsearch
+    tag: apm-server-6.8.0
+    pullPolicy: Always
+  replicaCount: 2
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+    # maxUnavailable: 1
+  priorityClassName: ""
+  ## system-cluster-critical or system-node-critical
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: 100m
+    limits:
+      memory: "1Gi"
+      cpu: 1
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: role
+              operator: In
+              values:
+              - apm
+          topologyKey: "kubernetes.io/hostname"
+
+  service:
+    type: LoadBalancer
+    port: 80
+    protocol: TCP
+    annotations: {}

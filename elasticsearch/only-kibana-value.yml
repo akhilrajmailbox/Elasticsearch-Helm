@@ -1,0 +1,57 @@
+############################################################################
+## Kibana Server Node
+es:
+  enabled: false
+node:
+  enabled: false
+apm:
+  enabled: false
+EsSnapshotCronJob:
+  enabled: false
+
+kibana:
+  enabled: true
+  esAdmin: "YOUR_ES_ADMIN"
+  esPassword: "YOUR_ES_PASS"
+  esUrl: "http://YOUR_ES_URL:9200"
+  image:
+    repository: akhilrajmailbox/elasticsearch
+    tag: kibana-6.8.0
+    pullPolicy: Always
+  replicaCount: 1
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+    # maxUnavailable: 1
+  priorityClassName: ""
+  ## system-cluster-critical or system-node-critical
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: 100m
+    limits:
+      memory: "1Gi"
+      cpu: 500m
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: role
+              operator: In
+              values:
+              - kibana
+          topologyKey: "kubernetes.io/hostname"
+
+  service:
+    type: LoadBalancer
+    port: 80
+    protocol: TCP
+    annotations: {}

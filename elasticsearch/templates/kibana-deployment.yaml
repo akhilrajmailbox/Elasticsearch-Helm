@@ -1,0 +1,89 @@
+{{ if .Values.kibana.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "elasticsearch.fullname" . }}-kibana
+  labels:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: kibana
+spec:
+  replicas: {{ .Values.kibana.replicaCount }}
+  selector:
+    matchLabels:
+{{ include "labels.standard" . | indent 6 }}
+      component: elasticsearch
+      role: kibana
+  template:
+    metadata:
+      labels:
+{{ include "labels.standard" . | indent 8 }}
+        component: elasticsearch
+        role: kibana
+    spec:
+      {{- if .Values.kibana.priorityClassName }}
+      priorityClassName: "{{ .Values.kibana.priorityClassName }}"
+      {{- end }}
+      volumes:
+        - name: kibana-config
+          configMap:
+            name: {{ template "elasticsearch.fullname" . }}-kibana
+            items:
+              - key: kibana.yml
+                path: kibana.yml
+      containers:
+      - name: es-kibana
+        imagePullPolicy: {{ .Values.kibana.image.pullPolicy }}
+        image: {{ .Values.kibana.image.repository }}:{{ .Values.kibana.image.tag }}
+        # image: docker.elastic.co/kibana/kibana-oss:6.2.2
+        env:
+        {{- if or (.Values.es.enabled) (.Values.node.enabled) }}
+        - name : KIBANA_ADMIN
+          value: kibanAdmin
+        - name : ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+                name: {{ include "elasticsearch.fullname" . }}-es-auth-secret
+                key: KIBANA_ADMIN_PASSWORD
+        - name: ELASTICSEARCH_URL
+          value: http://{{ template "elasticsearch.fullname" . }}-es-client.{{ .Release.Namespace }}.svc.cluster.local:9200
+        {{- else }}
+        - name : KIBANA_ADMIN
+          valueFrom:
+            secretKeyRef:
+                name: {{ include "elasticsearch.fullname" . }}-es-auth-secret
+                key: KIBANA_ADMIN
+        - name : ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+                name: {{ include "elasticsearch.fullname" . }}-es-auth-secret
+                key: KIBANA_ADMIN_PASSWORD
+        - name : ELASTICSEARCH_URL
+          valueFrom:
+            secretKeyRef:
+                name: {{ include "elasticsearch.fullname" . }}-es-auth-secret
+                key: ELASTICSEARCH_URL
+        {{- end }}        
+        ports:
+        - containerPort: 5601
+          name: http
+        volumeMounts:
+        - name: kibana-config
+          mountPath: /opt/kibana/config/kibana.yml
+          subPath: kibana.yml
+          readOnly: true
+        resources:
+{{ toYaml .Values.kibana.resources | indent 10 }}
+    {{- with .Values.kibana.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.kibana.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.kibana.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+{{ end }}

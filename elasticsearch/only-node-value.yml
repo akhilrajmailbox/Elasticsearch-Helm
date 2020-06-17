@@ -1,0 +1,70 @@
+############################################################################
+## ES Node for cluster (master, data and client will install on same pod)
+es:
+  enabled: false
+apm:
+  enabled: false
+kibana:
+  enabled: false
+EsSnapshotCronJob:
+  enabled: false
+
+node:
+  enabled: true
+  replicaCount: 3
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 2
+    # maxUnavailable: 1
+  priorityClassName: ""
+  ## system-cluster-critical or system-node-critical
+  number_of_master: "2"
+  java_opts: "-Xms4G -Xmx4G"
+
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: 50m
+    limits:
+      memory: "6Gi"
+      cpu: 2
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: role
+              operator: In
+              values:
+              - node
+          topologyKey: "kubernetes.io/hostname"
+
+  service:
+    discovery:
+      port: 9300
+      protocol: TCP
+      annotations: {}
+    client:
+      type: LoadBalancer
+      port: 9200
+      protocol: TCP
+      annotations: {}
+
+  persistence:
+    enabled: true
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    # storageClass: "-"
+    accessMode: ReadWriteOnce
+    size: 50Gi

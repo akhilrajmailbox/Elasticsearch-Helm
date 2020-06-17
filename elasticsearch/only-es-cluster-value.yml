@@ -1,0 +1,188 @@
+############################################################################
+## ES Node for cluster (master, data and client will install on same pod)
+node:
+  enabled: false
+apm:
+  enabled: false
+kibana:
+  enabled: false
+EsSnapshotCronJob:
+  enabled: false
+es:
+  enabled: true
+
+image:
+  repository: akhilrajmailbox/elasticsearch
+  tag: elasticsearch-6.8.0
+  # tag: elasticsearch-6.8.0-plugins
+  pullPolicy: Always
+
+## Configure basic auth for the deployment; when you are upgrading the helm.
+## plese use : enabled: "false" otherwise the credentials will overwrite..
+EsAuthAutoCreation:
+  enabled: true
+  # enable this for authetication
+  auth_config: "true"
+  # APM Server token
+  apmToken: "ARHelmApMTokeN"
+  # Kibana Admin user (kibanAdmin) Pass 
+  kibanaAdminPass: "ARHelmKibanaAdmiNSecreT"
+  # Kibana Readonly user (kibanaUser) Pass 
+  kibanaRoUserPass: "ARHelmKibanaRoSecreT"
+  # ElasticSearch User (LogAdmin) Pass to push togs to ES Cluster from fluentd / filebeat etc..
+  esClientPass: "ARHelmLogPusHSecreT"
+
+cluster_name: "ar-es"
+
+EsSnapshot:
+  enabled: false
+  azureblob:
+    enabled: false
+    account_name: ""
+    account_key: ""
+  gcs:
+    enabled: false
+  s3:
+    enabled: false
+    access_key: ""
+    secret_key: ""
+
+############################################################################
+## ES Master Node
+master:
+  replicaCount: 3
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 2
+    # maxUnavailable: 1
+  priorityClassName: ""
+  ## system-cluster-critical or system-node-critical
+  number_of_master: "2"
+  java_opts: "-Xms1G -Xmx1G"
+
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: 50m
+    limits:
+      memory: "2Gi"
+      cpu: 1
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: role
+              operator: In
+              values:
+              - master
+          topologyKey: "kubernetes.io/hostname"
+
+  service:
+    port: 9300
+    protocol: TCP
+    annotations: {}
+
+############################################################################
+## ES Data Node
+data:
+  replicaCount: 3
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 2
+    # maxUnavailable: 1
+  priorityClassName: ""
+  ## system-cluster-critical or system-node-critical
+  java_opts: "-Xms4G -Xmx4G"
+
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: 50m
+    limits:
+      memory: "5Gi"
+      cpu: 1
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: role
+              operator: In
+              values:
+              - data
+          topologyKey: "kubernetes.io/hostname"
+
+  service:
+    port: 9300
+    protocol: TCP
+    annotations: {}
+
+  persistence:
+    enabled: true
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    # storageClass: "-"
+    accessMode: ReadWriteOnce
+    size: 50Gi
+
+############################################################################
+## ES Client Node
+client:
+  replicaCount: 2
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+    # maxUnavailable: 1
+  priorityClassName: ""
+  ## system-cluster-critical or system-node-critical
+  java_opts: "-Xms1G -Xmx1G"
+
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: 50m
+    limits:
+      memory: "2Gi"
+      cpu: 1
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: role
+              operator: In
+              values:
+              - client
+          topologyKey: "kubernetes.io/hostname"
+
+  service:
+    type: LoadBalancer
+    port: 9200
+    protocol: TCP
+    annotations: {}

@@ -1,0 +1,24 @@
+{{ if .Values.kibana.enabled }}
+{{ if .Values.kibana.podDisruptionBudget.enabled }}
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "elasticsearch.fullname" . }}-kibana-pdb
+  labels:
+    {{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: kibana
+spec:
+{{- if .Values.kibana.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.kibana.podDisruptionBudget.minAvailable }}
+{{- end }}
+{{- if .Values.kibana.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.kibana.podDisruptionBudget.maxUnavailable }}
+{{- end }}
+  selector:
+    matchLabels:
+        {{ include "labels.standard" . | indent 4 }}
+        component: elasticsearch
+        role: kibana
+{{ end }}
+{{ end }}

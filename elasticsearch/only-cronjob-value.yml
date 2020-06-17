@@ -1,0 +1,34 @@
+############################################################################
+## enable cronjob deployment for snapshotting specific indices and deleteing old indices
+es:
+  enabled: false
+apm:
+  enabled: false
+kibana:
+  enabled: false
+node:
+  enabled: false
+EsAuthAutoCreation:
+  enabled: false
+EsSnapshotCronJob:
+  enabled: true
+
+  image:
+    repository: akhilrajmailbox/elasticsearch
+    tag: cron-snapshots
+    pullPolicy: Always
+  # use 'production' for creating snapshot and delete old snapshots, otherwise it will not snapshot anything but will delete the old indices
+  myenv: "development"
+  # elasticsearch access with credentials,
+  # example : http://kibanAdmin:ARHelmKibanaAdmiNSecreT@10.50.145.35:9200/
+  host: ""
+  # indice starting name to create snapshot, deleting old one
+  # example : apm- , in here all indices starting with apm- will consider
+  snapindices: ""
+  # 90 days old indices will get delete
+  indicesdeldays: "90"
+  # snapshot repository name you created
+  # example : development-elasticsearch-storage
+  snaprepo: ""
+  # snapshot aged 1 year will get delete from the snapshot repository
+  snapdeldays: "365"

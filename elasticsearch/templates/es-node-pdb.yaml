@@ -1,0 +1,24 @@
+{{ if and (not .Values.es.enabled) (.Values.node.enabled) }}
+{{ if .Values.node.podDisruptionBudget.enabled }}
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "elasticsearch.fullname" . }}-node-pdb
+  labels:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: node
+spec:
+{{- if .Values.node.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.node.podDisruptionBudget.minAvailable }}
+{{- end }}
+{{- if .Values.node.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.node.podDisruptionBudget.maxUnavailable }}
+{{- end }}
+  selector:
+    matchLabels:
+{{ include "labels.standard" . | indent 6 }}
+      component: elasticsearch
+      role: node
+{{ end }}
+{{ end }}

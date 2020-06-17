@@ -1,0 +1,25 @@
+{{ if .Values.kibana.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "elasticsearch.fullname" . }}-kibana
+{{- if .Values.kibana.service.annotations }}
+  annotations:
+{{ toYaml .Values.kibana.service.annotations | indent 4 }}
+{{- end }}
+  labels:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: kibana
+spec:
+  type: {{ .Values.kibana.service.type }}
+  selector:
+{{ include "labels.standard" . | indent 4 }}
+    component: elasticsearch
+    role: kibana
+  ports:
+  - name: http
+    port: {{ .Values.kibana.service.port }}
+    targetPort: 5601
+    protocol: {{ .Values.kibana.service.protocol }}
+{{ end }}

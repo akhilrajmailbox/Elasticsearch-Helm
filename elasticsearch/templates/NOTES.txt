@@ -1,0 +1,180 @@
+** Please be patient while the chart is being deployed **
+
+{{- if or (.Values.es.enabled) (.Values.node.enabled) }}
+{{- if .Values.EsAuthAutoCreation.true }}
+############################################################################
+
+ElasticSearch Credentials:
+
+    echo "Kibana Admin User          : kibanAdmin"
+    echo "Password                   : $(kubectl get secret --namespace {{ .Release.Namespace }} {{ template "elasticsearch.fullname" . }}-es-auth-secret -o jsonpath="{.data.KIBANA_ADMIN_PASSWORD}" | base64 --decode)"
+
+
+    echo "Kibana ReadOnly User       : kibanaUser"
+    echo "Password                   : $(kubectl get secret --namespace {{ .Release.Namespace }} {{ template "elasticsearch.fullname" . }}-es-auth-secret -o jsonpath="{.data.KIBANA_RO_PASSWORD}" | base64 --decode)"
+
+
+    echo "ElasticSearch Admin        : LogAdmin"
+    echo "Password                   : $(kubectl get secret --namespace {{ .Release.Namespace }} {{ template "elasticsearch.fullname" . }}-es-auth-secret -o jsonpath="{.data.PUSHLOG_PASSWORD}" | base64 --decode)"
+
+{{- end }}
+
+
+
+{{- if contains "NodePort" .Values.client.service.type  }}
+
+Obtain the NodePort IP and ports:
+
+    export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+    export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[1].nodePort}" services {{ template "elasticsearch.fullname" . }}-es-client)
+
+To Access the ElasticSearch :
+
+    echo "URL : http://${NODE_IP}:${NODE_PORT}/"
+
+
+{{- else if contains "LoadBalancer" .Values.client.service.type  }}
+
+Obtain the LoadBalancer IP:
+
+NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+      Watch the status with: 'kubectl get svc --namespace {{ .Release.Namespace }} -w {{ template "elasticsearch.fullname" . }}-es-client'
+
+    export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ template "elasticsearch.fullname" . }}-es-client --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+
+To Access the ElasticSearch :
+
+    echo "URL : http://${SERVICE_IP}:{{ .Values.client.service.port }}/"
+
+
+{{- else if contains "ClusterIP"  .Values.client.service.type  }}
+
+To Access the ElasticSearch :
+
+    echo "URL : http://127.0.0.1:{{ .Values.client.service.port }}/"
+    kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ template "elasticsearch.fullname" . }}-es-client {{ .Values.client.service.port }}:{{ .Values.client.service.port }}
+
+{{- end }}
+{{- end }}
+
+
+{{- if .Values.apm.enabled }}
+############################################################################
+
+APM Credentials:
+
+    echo "Token                   : $(kubectl get secret --namespace {{ .Release.Namespace }} {{ template "elasticsearch.fullname" . }}-es-auth-secret -o jsonpath="{.data.ELASTIC_APM_SECRET_TOKEN}" | base64 --decode)"
+
+
+{{- if contains "NodePort" .Values.apm.service.type  }}
+
+Obtain the NodePort IP and ports:
+
+    export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+    export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[1].nodePort}" services {{ template "elasticsearch.fullname" . }}-apm)
+
+To Access the ElasticSearch :
+
+    echo "URL : http://${NODE_IP}:${NODE_PORT}/"
+
+
+{{- else if contains "LoadBalancer" .Values.apm.service.type  }}
+
+Obtain the LoadBalancer IP:
+
+NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+      Watch the status with: 'kubectl get svc --namespace {{ .Release.Namespace }} -w {{ template "elasticsearch.fullname" . }}-apm'
+
+    export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ template "elasticsearch.fullname" . }}-apm --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+
+To Access the ElasticSearch :
+
+    echo "URL : http://${SERVICE_IP}:{{ .Values.apm.service.port }}/"
+
+
+{{- else if contains "ClusterIP"  .Values.apm.service.type  }}
+
+To Access the ElasticSearch :
+
+    echo "URL : http://127.0.0.1:{{ .Values.apm.service.port }}/"
+    kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ template "elasticsearch.fullname" . }}-apm {{ .Values.apm.service.port }}:{{ .Values.apm.service.port }}
+
+{{- end }}
+{{- end }}
+
+
+
+
+{{- if .Values.kibana.enabled }}
+############################################################################
+
+Kibana Credentials:
+
+{{- if or (.Values.es.enabled) (.Values.node.enabled) }}
+
+    echo "Kibana Admin User          : kibanAdmin"
+    echo "Password                   : $(kubectl get secret --namespace {{ .Release.Namespace }} {{ template "elasticsearch.fullname" . }}-es-auth-secret -o jsonpath="{.data.KIBANA_ADMIN_PASSWORD}" | base64 --decode)"
+
+
+    echo "Kibana ReadOnly User       : kibanaUser"
+    echo "Password                   : $(kubectl get secret --namespace {{ .Release.Namespace }} {{ template "elasticsearch.fullname" . }}-es-auth-secret -o jsonpath="{.data.KIBANA_RO_PASSWORD}" | base64 --decode)"
+
+{{- else }}
+
+    echo "Kibana Admin User          : $(kubectl get secret --namespace {{ .Release.Namespace }} {{ template "elasticsearch.fullname" . }}-es-auth-secret -o jsonpath="{.data.KIBANA_ADMIN}" | base64 --decode)"
+    echo "Password                   : $(kubectl get secret --namespace {{ .Release.Namespace }} {{ template "elasticsearch.fullname" . }}-es-auth-secret -o jsonpath="{.data.KIBANA_ADMIN_PASSWORD}" | base64 --decode)"
+
+{{- end }}
+
+{{- if contains "NodePort" .Values.kibana.service.type  }}
+
+Obtain the NodePort IP and ports:
+
+    export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+    export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[1].nodePort}" services {{ template "elasticsearch.fullname" . }}-kibana)
+
+To Access the ElasticSearch :
+
+    echo "URL : http://${NODE_IP}:${NODE_PORT}/"
+
+
+{{- else if contains "LoadBalancer" .Values.kibana.service.type  }}
+
+Obtain the LoadBalancer IP:
+
+NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+      Watch the status with: 'kubectl get svc --namespace {{ .Release.Namespace }} -w {{ template "elasticsearch.fullname" . }}-kibana'
+
+    export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ template "elasticsearch.fullname" . }}-kibana --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+
+To Access the ElasticSearch :
+
+    echo "URL : http://${SERVICE_IP}:{{ .Values.kibana.service.port }}/"
+
+
+{{- else if contains "ClusterIP"  .Values.kibana.service.type  }}
+
+To Access the ElasticSearch :
+
+    echo "URL : http://127.0.0.1:{{ .Values.kibana.service.port }}/"
+    kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ template "elasticsearch.fullname" . }}-kibana {{ .Values.kibana.service.port }}:{{ .Values.kibana.service.port }}
+
+{{- end }}
+{{- end }}
+
+
+
+{{- if .Values.EsSnapshotCronJob.enabled }}
+############################################################################
+
+Assuming that Only EsSnapshotCronJob enabled and rest all disabled to configure the cronjob as a seperate helm installation in your cluaster
+
+{{- end }}
+
+
+{{- if not .Values.data.persistence.enabled  }}
+#################################################################################
+######   WARNING: Persistence is disabled!!! You will lose your data when   #####
+######            the ElasticSearch data node is terminated.                #####
+#################################################################################
+{{- end }}

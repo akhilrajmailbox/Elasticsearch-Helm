@@ -1,7 +1,7 @@
 ** Please be patient while the chart is being deployed **
 
 {{- if or (.Values.es.enabled) (.Values.node.enabled) }}
-{{- if .Values.EsAuthAutoCreation.true }}
+{{- if .Values.EsAuthAutoCreation.enabled }}
 ############################################################################
 
 ElasticSearch Credentials:
@@ -18,9 +18,10 @@ ElasticSearch Credentials:
     echo "Password                   : $(kubectl get secret --namespace {{ .Release.Namespace }} {{ template "elasticsearch.fullname" . }}-es-auth-secret -o jsonpath="{.data.PUSHLOG_PASSWORD}" | base64 --decode)"
 
 {{- end }}
+{{- end }}
 
 
-
+{{- if and (.Values.es.enabled) (not .Values.node.enabled) }}
 {{- if contains "NodePort" .Values.client.service.type  }}
 
 Obtain the NodePort IP and ports:
@@ -56,6 +57,48 @@ To Access the ElasticSearch :
 
 {{- end }}
 {{- end }}
+
+
+
+
+{{- if and (not .Values.es.enabled) (.Values.node.enabled) }}
+{{- if contains "NodePort" .Values.node.service.client.type  }}
+
+Obtain the NodePort IP and ports:
+
+    export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+    export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[1].nodePort}" services {{ template "elasticsearch.fullname" . }}-es-client)
+
+To Access the ElasticSearch :
+
+    echo "URL : http://${NODE_IP}:${NODE_PORT}/"
+
+
+{{- else if contains "LoadBalancer" .Values.node.service.client.type  }}
+
+Obtain the LoadBalancer IP:
+
+NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+      Watch the status with: 'kubectl get svc --namespace {{ .Release.Namespace }} -w {{ template "elasticsearch.fullname" . }}-es-client'
+
+    export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ template "elasticsearch.fullname" . }}-es-client --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+
+To Access the ElasticSearch :
+
+    echo "URL : http://${SERVICE_IP}:{{ .Values.node.service.client.port }}/"
+
+
+{{- else if contains "ClusterIP"  .Values.node.service.client.type  }}
+
+To Access the ElasticSearch :
+
+    echo "URL : http://127.0.0.1:{{ .Values.node.service.client.port }}/"
+    kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ template "elasticsearch.fullname" . }}-es-client {{ .Values.node.service.client.port }}:{{ .Values.node.service.client.port }}
+
+{{- end }}
+{{- end }}
+
+
 
 
 {{- if .Values.apm.enabled }}
@@ -172,9 +215,21 @@ Assuming that Only EsSnapshotCronJob enabled and rest all disabled to configure 
 {{- end }}
 
 
+{{- if and (not .Values.es.enabled) (.Values.node.enabled) }}
+{{- if not .Values.node.persistence.enabled  }}
+#################################################################################
+######   WARNING: Persistence is disabled!!! You will lose your data when   #####
+######            the ElasticSearch data node is terminated.                #####
+#################################################################################
+{{- end }}
+{{- end }}
+
+
+{{- if and (.Values.es.enabled) (not .Values.node.enabled) }}
 {{- if not .Values.data.persistence.enabled  }}
 #################################################################################
 ######   WARNING: Persistence is disabled!!! You will lose your data when   #####
 ######            the ElasticSearch data node is terminated.                #####
 #################################################################################
+{{- end }}
 {{- end }}

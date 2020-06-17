@@ -116,21 +116,21 @@ $ helm delete elasticsearch -n elastic-cluster
 ## Deployment Strategy
 
 
-## ES Cluster Only (Master, Data and Ingest Nodes are running on each server)
+## ES Cluster Deployment (Master, Data and Ingest Nodes are running on each server)
 
 ![Cluster Topology](./src/es-cluster.png)
 
-To install the chart with the release name `elasticsearch` to install ES Cluster Only :
+To install the chart with the release name `elasticsearch` to install ES Cluster Configuration Only :
 
 ```console
 $ helm install elasticsearch ar-repo/elasticsearch -n elastic-cluster -f only-es-cluster-value.yml
 ```
 
-## ES Cluster Only (Master, Data and Ingest Nodes are running on same server)
+## ES Node Deployment (Master, Data and Ingest Nodes are running on same server)
 
 ![Node Topology](./src/es-node.png)
 
-To install the chart with the release name `elasticsearch` to install ES Cluster Only :
+To install the chart with the release name `elasticsearch` to install ES Node Configuration Only :
 
 ```console
 $ helm install elasticsearch ar-repo/elasticsearch -n elastic-cluster -f only-node-value.yml

@@ -6,8 +6,6 @@
 
 **All the YAML files are for Azure Deployment, but you can update the Yaml file to use any other cloud platform (gcp serviceaccount mounting configuration missing and the service.yaml file having azure related configuration for example....)**
 
-[kudos](https://medium.com/faun/https-medium-com-thakur-vaibhav23-ha-es-k8s-7e655c1b7b61)
-
 [help](https://www.datadoghq.com/blog/elasticsearch-game-day/)
 
 [readonlyrest-docs](https://github.com/beshu-tech/readonlyrest-docs/blob/master/elasticsearch.md)

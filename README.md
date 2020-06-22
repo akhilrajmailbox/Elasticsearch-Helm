@@ -1,6 +1,6 @@
 # elasticsearch Helm Chart
 
-* Installs the web dashboarding system [ElasticSearch Cluster](.)
+* Installs the web dashboarding system [ElasticSearch Cluster](https://github.com/akhilrajmailbox/Elasticsearch-Helm/edit/master/README.md)
 
 **This deployment using ES version 6.8.0, will not support version 7.x.x**
 
